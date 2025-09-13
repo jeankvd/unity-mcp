@@ -11,26 +11,8 @@ from telemetry_decorator import telemetry_tool
 def register_manage_shader_tools(mcp: FastMCP):
     """Register all shader script management tools with the MCP server."""
 
-    @mcp.tool()
-    @telemetry_tool("manage_shader")
-    def manage_shader(
-        ctx: Any,
-        action: str,
-        name: str,
-        path: str,
-        contents: str,
-    ) -> Dict[str, Any]:
-        """Manages shader scripts in Unity (create, read, update, delete).
-
-        Args:
-            action: Operation ('create', 'read', 'update', 'delete').
-            name: Shader name (no .cs extension).
-            path: Asset path (default: "Assets/").
-            contents: Shader code for 'create'/'update'.
-
-        Returns:
-            Dictionary with results ('success', 'message', 'data').
-        """
+    def _send_shader_command(action: str, name: str, path: str, contents: str = None) -> Dict[str, Any]:
+        """Helper function to send shader commands to Unity."""
         try:
             # Prepare parameters for Unity
             params = {
@@ -69,3 +51,107 @@ def register_manage_shader_tools(mcp: FastMCP):
         except Exception as e:
             # Handle Python-side errors (e.g., connection issues)
             return {"success": False, "message": f"Python error managing shader: {str(e)}"}
+
+    @mcp.tool(description="Create a new shader script in Unity.")
+    @telemetry_tool("create_shader")
+    def create_shader(
+        ctx: Context,
+        name: str,
+        path: str,
+        contents: str,
+    ) -> Dict[str, Any]:
+        """Create a new shader script in Unity.
+
+        Args:
+            ctx: The MCP context.
+            name: Shader name (no .cs extension).
+            path: Asset path (e.g., "Assets/Shaders/").
+            contents: Shader code to create.
+
+        Returns:
+            Dictionary with results ('success', 'message', 'data').
+        """
+        return _send_shader_command("create", name, path, contents)
+
+    @mcp.tool(description="Read the contents of an existing shader script.")
+    @telemetry_tool("read_shader")
+    def read_shader(
+        ctx: Context,
+        name: str,
+        path: str,
+    ) -> Dict[str, Any]:
+        """Read the contents of an existing shader script.
+
+        Args:
+            ctx: The MCP context.
+            name: Shader name (no .cs extension).
+            path: Asset path (e.g., "Assets/Shaders/").
+
+        Returns:
+            Dictionary with results ('success', 'message', 'data').
+        """
+        return _send_shader_command("read", name, path)
+
+    @mcp.tool(description="Update an existing shader script with new contents.")
+    @telemetry_tool("update_shader")
+    def update_shader(
+        ctx: Context,
+        name: str,
+        path: str,
+        contents: str,
+    ) -> Dict[str, Any]:
+        """Update an existing shader script with new contents.
+
+        Args:
+            ctx: The MCP context.
+            name: Shader name (no .cs extension).
+            path: Asset path (e.g., "Assets/Shaders/").
+            contents: New shader code.
+
+        Returns:
+            Dictionary with results ('success', 'message', 'data').
+        """
+        return _send_shader_command("update", name, path, contents)
+
+    @mcp.tool(description="Delete a shader script from Unity.")
+    @telemetry_tool("delete_shader")
+    def delete_shader(
+        ctx: Context,
+        name: str,
+        path: str,
+    ) -> Dict[str, Any]:
+        """Delete a shader script from Unity.
+
+        Args:
+            ctx: The MCP context.
+            name: Shader name (no .cs extension).
+            path: Asset path (e.g., "Assets/Shaders/").
+
+        Returns:
+            Dictionary with results ('success', 'message', 'data').
+        """
+        return _send_shader_command("delete", name, path)
+
+    @mcp.tool(description="Compatibility router for legacy shader operations.")
+    @telemetry_tool("manage_shader")
+    def manage_shader(
+        ctx: Any,
+        action: str,
+        name: str,
+        path: str,
+        contents: str,
+    ) -> Dict[str, Any]:
+        """Compatibility router for legacy shader operations.
+
+        DEPRECATED: Use create_shader, read_shader, update_shader, or delete_shader instead.
+
+        Args:
+            action: Operation ('create', 'read', 'update', 'delete').
+            name: Shader name (no .cs extension).
+            path: Asset path (default: "Assets/").
+            contents: Shader code for 'create'/'update'.
+
+        Returns:
+            Dictionary with results ('success', 'message', 'data').
+        """
+        return _send_shader_command(action, name, path, contents)
