@@ -9,6 +9,84 @@ from telemetry_decorator import telemetry_tool
 def register_manage_gameobject_tools(mcp: FastMCP):
     """Register all GameObject management tools with the MCP server."""
 
+    @mcp.tool(description="Find GameObjects in the Unity scene.")
+    @telemetry_tool("find_gameobject") 
+    def find_gameobject(
+        ctx: Any,
+        search_term: str,
+        search_method: str = None,
+        find_all: bool = False,
+        search_in_children: bool = False,
+        search_inactive: bool = False,
+    ) -> Dict[str, Any]:
+        """Find GameObjects in the Unity scene.
+
+        Args:
+            ctx: The MCP context.
+            search_term: What to search for.
+            search_method: How to search ('by_name', 'by_id', 'by_path', etc.).
+            find_all: Whether to find all matches or just the first.
+            search_in_children: Whether to search in child objects.
+            search_inactive: Whether to include inactive objects.
+
+        Returns:
+            Dictionary with operation results ('success', 'message', 'data').
+        """
+        try:
+            params = {
+                "action": "find",
+                "searchTerm": search_term,
+                "searchMethod": search_method,
+                "findAll": find_all,
+                "searchInChildren": search_in_children,
+                "searchInactive": search_inactive,
+            }
+            params = {k: v for k, v in params.items() if v is not None}
+            
+            response = send_command_with_retry("manage_gameobject", params)
+            
+            if isinstance(response, dict) and response.get("success"):
+                return {"success": True, "message": response.get("message", "GameObject search successful."), "data": response.get("data")}
+            return response if isinstance(response, dict) else {"success": False, "message": str(response)}
+        except Exception as e:
+            return {"success": False, "message": f"Python error finding GameObject: {str(e)}"}
+
+    @mcp.tool(description="Get components attached to a GameObject.")
+    @telemetry_tool("get_gameobject_components")
+    def get_gameobject_components(
+        ctx: Any,
+        target: str,
+        search_method: str = None,
+        includeNonPublicSerialized: bool = None,
+    ) -> Dict[str, Any]:
+        """Get components attached to a GameObject.
+
+        Args:
+            ctx: The MCP context.
+            target: GameObject identifier (name or path).
+            search_method: How to find the target ('by_name', 'by_id', 'by_path').
+            includeNonPublicSerialized: Include private [SerializeField] fields.
+
+        Returns:
+            Dictionary with operation results ('success', 'message', 'data').
+        """
+        try:
+            params = {
+                "action": "get_components",
+                "target": target,
+                "searchMethod": search_method,
+                "includeNonPublicSerialized": includeNonPublicSerialized,
+            }
+            params = {k: v for k, v in params.items() if v is not None}
+            
+            response = send_command_with_retry("manage_gameobject", params)
+            
+            if isinstance(response, dict) and response.get("success"):
+                return {"success": True, "message": response.get("message", "GameObject components retrieved."), "data": response.get("data")}
+            return response if isinstance(response, dict) else {"success": False, "message": str(response)}
+        except Exception as e:
+            return {"success": False, "message": f"Python error getting GameObject components: {str(e)}"}
+
     @mcp.tool()
     @telemetry_tool("manage_gameobject")
     def manage_gameobject(
