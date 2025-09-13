@@ -129,6 +129,25 @@ def register_manage_editor_tools(mcp: FastMCP):
         """
         return _send_editor_command("add_tag", wait_for_completion, tag_name=tag_name)
 
+    @mcp.tool(description="Add a layer to the Unity editor.")
+    @telemetry_tool("add_editor_layer")
+    def add_editor_layer(
+        ctx: Context,
+        layer_name: str,
+        wait_for_completion: bool = None,
+    ) -> Dict[str, Any]:
+        """Add a layer to the Unity editor.
+
+        Args:
+            ctx: The MCP context.
+            layer_name: Name of the layer to add.
+            wait_for_completion: If True, waits for the action to complete.
+
+        Returns:
+            Dictionary with operation results ('success', 'message', 'data').
+        """
+        return _send_editor_command("add_layer", wait_for_completion, layer_name=layer_name)
+
     @mcp.tool(description="Get telemetry status from the Unity editor.")
     @telemetry_tool("get_editor_telemetry_status")
     def get_editor_telemetry_status(
