@@ -9,6 +9,285 @@ from telemetry_decorator import telemetry_tool
 def register_manage_gameobject_tools(mcp: FastMCP):
     """Register all GameObject management tools with the MCP server."""
 
+    @mcp.tool(description="Find GameObjects in the Unity scene.")
+    @telemetry_tool("find_gameobject") 
+    def find_gameobject(
+        ctx: Any,
+        search_term: str,
+        search_method: str = None,
+        find_all: bool = False,
+        search_in_children: bool = False,
+        search_inactive: bool = False,
+    ) -> Dict[str, Any]:
+        """Find GameObjects in the Unity scene.
+
+        Args:
+            ctx: The MCP context.
+            search_term: What to search for.
+            search_method: How to search ('by_name', 'by_id', 'by_path', etc.).
+            find_all: Whether to find all matches or just the first.
+            search_in_children: Whether to search in child objects.
+            search_inactive: Whether to include inactive objects.
+
+        Returns:
+            Dictionary with operation results ('success', 'message', 'data').
+        """
+        try:
+            params = {
+                "action": "find",
+                "searchTerm": search_term,
+                "searchMethod": search_method,
+                "findAll": find_all,
+                "searchInChildren": search_in_children,
+                "searchInactive": search_inactive,
+            }
+            params = {k: v for k, v in params.items() if v is not None}
+            
+            response = send_command_with_retry("manage_gameobject", params)
+            
+            if isinstance(response, dict) and response.get("success"):
+                return {"success": True, "message": response.get("message", "GameObject search successful."), "data": response.get("data")}
+            return response if isinstance(response, dict) else {"success": False, "message": str(response)}
+        except Exception as e:
+            return {"success": False, "message": f"Python error finding GameObject: {str(e)}"}
+
+    @mcp.tool(description="Get components attached to a GameObject.")
+    @telemetry_tool("get_gameobject_components")
+    def get_gameobject_components(
+        ctx: Any,
+        target: str,
+        search_method: str = None,
+        includeNonPublicSerialized: bool = None,
+    ) -> Dict[str, Any]:
+        """Get components attached to a GameObject.
+
+        Args:
+            ctx: The MCP context.
+            target: GameObject identifier (name or path).
+            search_method: How to find the target ('by_name', 'by_id', 'by_path').
+            includeNonPublicSerialized: Include private [SerializeField] fields.
+
+        Returns:
+            Dictionary with operation results ('success', 'message', 'data').
+        """
+        try:
+            params = {
+                "action": "get_components",
+                "target": target,
+                "searchMethod": search_method,
+                "includeNonPublicSerialized": includeNonPublicSerialized,
+            }
+            params = {k: v for k, v in params.items() if v is not None}
+            
+            response = send_command_with_retry("manage_gameobject", params)
+            
+            if isinstance(response, dict) and response.get("success"):
+                return {"success": True, "message": response.get("message", "GameObject components retrieved."), "data": response.get("data")}
+            return response if isinstance(response, dict) else {"success": False, "message": str(response)}
+        except Exception as e:
+            return {"success": False, "message": f"Python error getting GameObject components: {str(e)}"}
+
+    @mcp.tool(description="Create a new GameObject.")
+    @telemetry_tool("create_gameobject")
+    def create_gameobject(
+        ctx: Any,
+        name: str,
+        tag: str = None,
+        parent: str = None,
+        layer: str = None,
+        component_properties: Dict[str, Any] = None,
+        params: Dict[str, Any] = None,
+    ) -> Dict[str, Any]:
+        """Create a new GameObject.
+
+        Args:
+            ctx: The MCP context.
+            name: GameObject name.
+            tag: Tag name (optional).
+            parent: Parent GameObject reference (optional).
+            layer: Layer name (optional).
+            component_properties: Dict mapping Component names to their properties.
+            params: Additional parameters (optional).
+
+        Returns:
+            A dictionary with operation results ('success', 'data', 'error').
+        """
+        try:
+            request_params = {
+                "action": "create",
+                "name": name,
+            }
+            if tag:
+                request_params["tag"] = tag
+            if parent:
+                request_params["parent"] = parent
+            if layer:
+                request_params["layer"] = layer
+            if component_properties:
+                request_params["componentProperties"] = component_properties
+            if params:
+                request_params.update(params)
+            
+            response = send_command_with_retry("manage_gameobject", request_params)
+            return response if isinstance(response, dict) else {"success": False, "message": str(response)}
+        except Exception as e:
+            return {"success": False, "message": f"Error creating GameObject: {str(e)}"}
+
+    @mcp.tool(description="Modify an existing GameObject.")
+    @telemetry_tool("modify_gameobject")
+    def modify_gameobject(
+        ctx: Any,
+        target: str,
+        search_method: str = "by_name",
+        name: str = None,
+        tag: str = None,
+        parent: str = None,
+        layer: str = None,
+        component_properties: Dict[str, Any] = None,
+    ) -> Dict[str, Any]:
+        """Modify an existing GameObject.
+
+        Args:
+            ctx: The MCP context.
+            target: GameObject identifier (name or path string).
+            search_method: How to find the object ('by_name', 'by_id', 'by_path', etc.).
+            name: New name (optional).
+            tag: New tag (optional).
+            parent: New parent GameObject reference (optional).
+            layer: New layer (optional).
+            component_properties: Dict mapping Component names to their properties.
+
+        Returns:
+            A dictionary with operation results ('success', 'data', 'error').
+        """
+        try:
+            request_params = {
+                "action": "modify",
+                "target": target,
+                "searchMethod": search_method,
+            }
+            if name:
+                request_params["name"] = name
+            if tag:
+                request_params["tag"] = tag
+            if parent:
+                request_params["parent"] = parent
+            if layer:
+                request_params["layer"] = layer
+            if component_properties:
+                request_params["componentProperties"] = component_properties
+            
+            response = send_command_with_retry("manage_gameobject", request_params)
+            return response if isinstance(response, dict) else {"success": False, "message": str(response)}
+        except Exception as e:
+            return {"success": False, "message": f"Error modifying GameObject: {str(e)}"}
+
+    @mcp.tool(description="Add a component to a GameObject.")
+    @telemetry_tool("add_gameobject_component")
+    def add_gameobject_component(
+        ctx: Any,
+        target: str,
+        component_type: str,
+        search_method: str = "by_name",
+        component_properties: Dict[str, Any] = None,
+    ) -> Dict[str, Any]:
+        """Add a component to a GameObject.
+
+        Args:
+            ctx: The MCP context.
+            target: GameObject identifier (name or path string).
+            component_type: Type of component to add (e.g., 'Rigidbody', 'MeshRenderer').
+            search_method: How to find the object ('by_name', 'by_id', 'by_path', etc.).
+            component_properties: Dict of properties to set on the new component.
+
+        Returns:
+            A dictionary with operation results ('success', 'data', 'error').
+        """
+        try:
+            request_params = {
+                "action": "add_component",
+                "target": target,
+                "searchMethod": search_method,
+                "componentType": component_type,
+            }
+            if component_properties:
+                request_params["componentProperties"] = component_properties
+            
+            response = send_command_with_retry("manage_gameobject", request_params)
+            return response if isinstance(response, dict) else {"success": False, "message": str(response)}
+        except Exception as e:
+            return {"success": False, "message": f"Error adding component: {str(e)}"}
+
+    @mcp.tool(description="Remove a component from a GameObject.")
+    @telemetry_tool("remove_gameobject_component")
+    def remove_gameobject_component(
+        ctx: Any,
+        target: str,
+        component_type: str,
+        search_method: str = "by_name",
+    ) -> Dict[str, Any]:
+        """Remove a component from a GameObject.
+
+        Args:
+            ctx: The MCP context.
+            target: GameObject identifier (name or path string).
+            component_type: Type of component to remove (e.g., 'Rigidbody', 'MeshRenderer').
+            search_method: How to find the object ('by_name', 'by_id', 'by_path', etc.).
+
+        Returns:
+            A dictionary with operation results ('success', 'data', 'error').
+        """
+        try:
+            request_params = {
+                "action": "remove_component",
+                "target": target,
+                "searchMethod": search_method,
+                "componentType": component_type,
+            }
+            
+            response = send_command_with_retry("manage_gameobject", request_params)
+            return response if isinstance(response, dict) else {"success": False, "message": str(response)}
+        except Exception as e:
+            return {"success": False, "message": f"Error removing component: {str(e)}"}
+
+    @mcp.tool(description="Set properties on a GameObject component.")
+    @telemetry_tool("set_gameobject_component_property")
+    def set_gameobject_component_property(
+        ctx: Any,
+        target: str,
+        component_type: str,
+        property_name: str,
+        property_value: Any,
+        search_method: str = "by_name",
+    ) -> Dict[str, Any]:
+        """Set properties on a GameObject component.
+
+        Args:
+            ctx: The MCP context.
+            target: GameObject identifier (name or path string).
+            component_type: Type of component (e.g., 'Rigidbody', 'MeshRenderer').
+            property_name: Name of the property to set.
+            property_value: Value to set the property to.
+            search_method: How to find the object ('by_name', 'by_id', 'by_path', etc.).
+
+        Returns:
+            A dictionary with operation results ('success', 'data', 'error').
+        """
+        try:
+            request_params = {
+                "action": "set_component_property",
+                "target": target,
+                "searchMethod": search_method,
+                "componentType": component_type,
+                "propertyName": property_name,
+                "propertyValue": property_value,
+            }
+            
+            response = send_command_with_retry("manage_gameobject", request_params)
+            return response if isinstance(response, dict) else {"success": False, "message": str(response)}
+        except Exception as e:
+            return {"success": False, "message": f"Error setting component property: {str(e)}"}
+
     @mcp.tool()
     @telemetry_tool("manage_gameobject")
     def manage_gameobject(

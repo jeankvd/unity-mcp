@@ -353,6 +353,21 @@ def register_manage_script_tools(mcp: FastMCP):
         return {"success": False, "message": str(resp)}
 
     @mcp.tool(description=(
+        "Read a C# script by URI or Assets-relative path.\n\n"
+        "Args: uri (unity://path/... or file://... or Assets/...).\n"
+        "Returns: Script contents and metadata.\n"
+    ))
+    @telemetry_tool("read_script")
+    def read_script(ctx: Context, uri: str) -> Dict[str, Any]:
+        """Read a C# script by URI."""
+        name, directory = _split_uri(uri)
+        if not directory or directory.split("/")[0].lower() != "assets":
+            return {"success": False, "code": "path_outside_assets", "message": "URI must resolve under 'Assets/'."}
+        params = {"action": "read", "name": name, "path": directory}
+        resp = send_command_with_retry("manage_script", params)
+        return resp if isinstance(resp, dict) else {"success": False, "message": str(resp)}
+
+    @mcp.tool(description=(
         "Create a new C# script at the given project path.\n\n"
         "Args: path (e.g., 'Assets/Scripts/My.cs'), contents (string), script_type, namespace.\n"
         "Rules: path must be under Assets/. Contents will be Base64-encoded over transport.\n"
